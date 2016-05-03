@@ -1,6 +1,6 @@
 /* ssh-error.c -- Error reporting to Guile.
  *
- * Copyright (C) 2013 Artyom V. Poptsov <poptsov.artyom@gmail.com>
+ * Copyright (C) 2013, 2014, 2015, 2016 Artyom V. Poptsov <poptsov.artyom@gmail.com>
  *
  * This file is part of Guile-SSH.
  *
@@ -22,11 +22,13 @@
 #include <libssh/libssh.h>
 
 #include "error.h"
+#include "log.h"
 
 /* Report an error */
 void
 guile_ssh_error (const char *proc, const char *msg, SCM args, SCM rest)
 {
+  _gssh_log_error (proc, msg, args);
   scm_error (scm_from_locale_symbol (GUILE_SSH_ERROR), proc, msg, args, rest);
 }
 
@@ -34,6 +36,7 @@ guile_ssh_error (const char *proc, const char *msg, SCM args, SCM rest)
 void
 guile_ssh_error1 (const char *proc, const char *msg, SCM args)
 {
+  _gssh_log_error (proc, msg, args);
   scm_error (scm_from_locale_symbol (GUILE_SSH_ERROR), proc, msg, args,
              SCM_BOOL_F);
 }
@@ -42,6 +45,7 @@ guile_ssh_error1 (const char *proc, const char *msg, SCM args)
 void
 guile_ssh_session_error1 (const char *proc, ssh_session session, SCM args)
 {
+  _gssh_log_error (proc, ssh_get_error (session), args);
   guile_ssh_error1 (proc, ssh_get_error (session), args);
 }
 

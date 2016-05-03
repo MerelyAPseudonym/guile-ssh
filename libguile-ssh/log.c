@@ -1,6 +1,6 @@
 /* log.c -- Guile-SSH logging procedures
  *
- * Copyright (C) 2014 Artyom V. Poptsov <poptsov.artyom@gmail.com>
+ * Copyright (C) 2014, 2015, 2016 Artyom V. Poptsov <poptsov.artyom@gmail.com>
  *
  * This file is part of Guile-SSH
  *
@@ -234,6 +234,15 @@ Get global log verbosity value.\
 ")
 {
   return _ssh_const_to_scm (log_verbosity, ssh_get_log_level ());
+}
+
+
+/* Write an error MESSAGE along with ARGS to the libssh log. */
+void
+_gssh_log_error (const char* function_name, const char* msg, SCM args)
+{
+  _ssh_log (SSH_LOG_NOLOG, function_name, "[GSSH ERROR] %s: %s",
+            msg, scm_to_locale_string (scm_object_to_string (args, SCM_UNBOUND)));
 }
 
 

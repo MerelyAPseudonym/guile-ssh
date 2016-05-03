@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Artyom V. Poptsov <poptsov.artyom@gmail.com>
+/* Copyright (C) 2014, 2015, 2016 Artyom V. Poptsov <poptsov.artyom@gmail.com>
  *
  * This file is part of Guile-SSH.
  *
@@ -19,5 +19,8 @@
 extern struct symbol_mapping log_verbosity[];
 
 extern void init_log_func (void);
+
+extern void _gssh_log_error (const char* function_name, const char* msg,
+                             SCM args);
 
 /* log.h ends here */
