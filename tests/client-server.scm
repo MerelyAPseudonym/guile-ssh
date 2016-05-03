@@ -67,7 +67,6 @@
 
 (define (simple-server-proc server)
   "start a SERVER that accepts a connection and handles a key exchange."
-  (server-listen server)
   (let ((s (server-accept server)))
     (server-handle-key-exchange s)))
 
@@ -336,7 +335,6 @@
 
    ;; server
    (lambda (server)
-     (server-listen server)
      (let ((session (server-accept server)))
        (server-handle-key-exchange session)
        (make-session-loop session
@@ -384,12 +382,30 @@
 
 (define (make-session/channel-test)
   "Make a session for a channel test."
-  (let ((session (make-session-for-test)))
-    (sleep 1)
-    (connect! session)
-    (authenticate-server session)
-    (userauth-none! session)
-    session))
+  (define max-tries 30)
+  (let loop ((session (make-session-for-test))
+             (count   max-tries))
+    (if (not (eq? (connect! session) 'ok))
+        (begin
+          (format-log/scm 'nolog
+                          "make-session/channel-test"
+                          "Unable to connect in ~d tries: ~a~%"
+                          (- max-tries count)
+                          session)
+          (disconnect! session)
+          (set! session #f)
+          (sleep 1)
+          (if (zero? count)
+              (format-log/scm 'nolog
+                              "make-session/channel-test"
+                              "~a"
+                              "Giving up ...")
+              (loop (make-session-for-test)
+                    (1- count))))
+        (begin
+          (authenticate-server session)
+          (userauth-none! session)
+          session))))
 
 (test-assert "make-channel"
   (run-client-test

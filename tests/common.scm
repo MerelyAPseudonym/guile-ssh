@@ -55,6 +55,7 @@
             run-client-test
             run-client-test/separate-process
             run-server-test
+            format-log/scm
             poll))
 
 
@@ -105,18 +106,26 @@
 
 (define (make-server-for-test)
   "Make a server with predefined parameters for a test."
+  (define mtx (make-mutex 'allow-external-unlock))
+  (lock-mutex mtx)
+  (dynamic-wind
+    (const #f)
+    (lambda ()
+      ;; FIXME: This hack is aimed to give every server its own unique
+      ;; port to listen to.  Clients will pick up new port number
+      ;; automatically through global `port' symbol as well.
+      (set! *port* (get-unused-port))
 
-  ;; FIXME: This hack is aimed to give every server its own unique
-  ;; port to listen to.  Clients will pick up new port number
-  ;; automatically through global `port' symbol as well.
-  (set! *port* (get-unused-port))
-
-  (make-server
-   #:bindaddr %addr
-   #:bindport *port*
-   #:rsakey   %rsakey
-   #:dsakey   %dsakey
-   #:log-verbosity 'rare))
+      (let ((s (make-server
+                #:bindaddr %addr
+                #:bindport *port*
+                #:rsakey   %rsakey
+                #:dsakey   %dsakey
+                #:log-verbosity 'rare)))
+        (server-listen s)
+        s))
+    (lambda ()
+      (unlock-mutex mtx))))
 
 
 ;;; Port helpers.
@@ -273,16 +282,23 @@ main procedure."
 SERVER-PROC as an argument.  CLIENT-PROC is expected to be a thunk that should
 be executed in the parent process.  The procedure returns a result of
 CLIENT-PROC call."
+  (format-log/scm 'nolog "run-client-test" "Making a server ...")
   (let ((server (make-server-for-test)))
+    (format-log/scm 'nolog "run-client-test" "Server: ~a" server)
+    (format-log/scm 'nolog "run-client-test" "Spawning processes ...")
     (multifork
      ;; server
      (lambda ()
        (dynamic-wind
          (const #f)
          (lambda ()
+           (format-log/scm 'nolog "run-client-test"
+                           "Server process is up and running")
            (set-log-userdata! (string-append (get-log-userdata) " (server)"))
            (server-set! server 'log-verbosity 'rare)
            (server-proc server)
+           (format-log/scm 'nolog "run-client-test"
+                           "Server procedure is finished")
            (primitive-exit 0))
          (lambda ()
            (primitive-exit 1))))
