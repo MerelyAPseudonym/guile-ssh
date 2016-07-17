@@ -16,7 +16,7 @@
  * along with Guile-SSH.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#import "common.h"
+#include "common.h"
 
 extern struct symbol_mapping log_verbosity[];
 
