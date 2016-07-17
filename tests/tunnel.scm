@@ -1,6 +1,6 @@
 ;;; tunnel.scm -- Guile-SSH tunnel tests.
 
-;; Copyright (C) 2015 Artyom V. Poptsov <poptsov.artyom@gmail.com>
+;; Copyright (C) 2015, 2016 Artyom V. Poptsov <poptsov.artyom@gmail.com>
 ;;
 ;; This file is a part of Guile-SSH.
 ;;
@@ -33,71 +33,74 @@
              (ssh server)
              (ssh tunnel))
 
-(test-begin "tunnel")
-
-
-;;; Logging
-
-(setup-test-suite-logging! "tunnel")
+(test-begin-with-log "tunnel")
 
 ;;;
 
-(define (make-session/channel-test)
-  "Make a session for a channel test."
-  (let ((session (make-session-for-test)))
-    (sleep 1)
-    (connect! session)
-    (authenticate-server session)
-    (userauth-none! session)
-    session))
+(define %test-string "hello scheme world")
 
-(define (make-channel/pf-test session)
+(define (call-with-connected-session/tunnel proc)
+  (call-with-connected-session
+   (lambda (session)
+     (authenticate-server session)
+     (userauth-none! session)
+     (proc session))))
+
+(define (call-with-forward-channel session proc)
   (let ((channel (make-channel session)))
-    (case (channel-open-forward channel
-                                #:source-host "localhost"
-                                #:local-port  (get-unused-port)
-                                #:remote-host "localhost"
-                                #:remote-port (1+ (get-unused-port)))
-      ((ok)
-       channel)
-      (else => (cut error "Could not open forward" <>)))))
+    (dynamic-wind
+      (const #f)
+      (lambda ()
+        (case (channel-open-forward channel
+                                    #:source-host "localhost"
+                                    #:local-port  (get-unused-port)
+                                    #:remote-host "localhost"
+                                    #:remote-port (1+ (get-unused-port)))
+          ((ok)
+           (proc channel))
+          (else => (cut error "Could not open forward" <>))))
+      (lambda () (close channel)))))
 
 
-(test-assert-with-log "port forwarding, direct"
+(test-equal-with-log "port forwarding, direct"
+  %test-string
   (run-client-test
-
    ;; server
    (lambda (server)
      (start-server/dt-test server
                            (lambda (channel)
                              (write-line (read-line channel) channel))))
-
    ;; client
    (lambda ()
-     (let* ((session (make-session/channel-test))
-            (channel (make-channel/pf-test session))
-            (str     "hello world"))
-       (write-line str channel)
-       (while (not (char-ready? channel)))
-       (let ((line (read-line channel)))
-         (close channel)
-         (disconnect! session)
-         (string=? str line))))))
+     (call-with-connected-session/tunnel
+      (lambda (session)
+        (call-with-forward-channel session
+          (lambda (channel)                                   
+            (write-line %test-string channel)
+            (poll channel read-line))))))))
 
 ;; Create a tunnel, check the result.
 (test-assert-with-log "make-tunnel"
-  (let* ((session (make-session-for-test))
-         (local-port (get-unused-port))
-         (remote-host "www.example.org")
-         (tunnel  (make-tunnel session
-                               #:port  local-port
-                               #:host remote-host)))
-    (and (eq?      (tunnel-session tunnel)      session)
-         (string=? (tunnel-bind-address tunnel) "127.0.0.1")
-         (eq?      (tunnel-port tunnel)         local-port)
-         (eq?      (tunnel-host-port tunnel)    local-port)
-         (eq?      (tunnel-host tunnel)         remote-host)
-         (eq?      (tunnel-reverse? tunnel)     #f))))
+  (run-client-test
+   ;; server
+   (lambda (server)
+     (start-server/dt-test server
+                           (lambda (channel)
+                             (write-line (read-line channel) channel))))
+   (lambda ()
+     (call-with-connected-session/tunnel
+      (lambda (session)
+        (let* ((local-port (get-unused-port))
+               (remote-host "www.example.org")
+               (tunnel  (make-tunnel session
+                                     #:port  local-port
+                                     #:host remote-host)))
+          (and (eq?      (tunnel-session tunnel)      session)
+               (string=? (tunnel-bind-address tunnel) "127.0.0.1")
+               (eq?      (tunnel-port tunnel)         local-port)
+               (eq?      (tunnel-host-port tunnel)    local-port)
+               (eq?      (tunnel-host tunnel)         remote-host)
+               (eq?      (tunnel-reverse? tunnel)     #f))))))))
 
 
 ;; Client calls 'call-with-ssh-forward' with a procedure which sends a string
@@ -144,7 +147,8 @@
 ;;  o               |                    | Check the result.
 ;;  |               |                    |
 ;;
-(test-assert-with-log "call-with-ssh-forward"
+(test-equal-with-log "call-with-ssh-forward"
+  %test-string
   (run-client-test/separate-process
    ;; Server
    (lambda (server)
@@ -154,21 +158,20 @@
    ;; Client (call/pf)
    (lambda ()
      (set-log-userdata! (string-append (get-log-userdata) " (call/pf)"))
-     (let* ((session     (make-session/channel-test))
-            (local-port  (get-unused-port))
-            (remote-host "www.example.org")
-            (tunnel      (make-tunnel session
-                                      #:port local-port
-                                      #:host remote-host))
-            (str         "hello world"))
-       (call-with-ssh-forward tunnel
-                              (lambda (sock)
-                                (write-line str sock)
-                                (while (not (char-ready? sock)))
-                                (read-line sock)))))
-   ;; Predicate
+     (call-with-connected-session/tunnel
+      (lambda (session)
+        (let* ((local-port  (get-unused-port))
+               (remote-host "www.example.org")
+               (tunnel      (make-tunnel session
+                                         #:port local-port
+                                         #:host remote-host)))
+          (call-with-ssh-forward tunnel
+                                 (lambda (sock)
+                                   (write-line %test-string sock)
+                                   (poll sock read-line)))))))
+   ;; Handle the result.
    (lambda (result)
-     (string=? result "hello world"))))
+     result)))
 
 
 (test-assert-with-log "channel-{listen,cancel}-forward"
@@ -178,16 +181,17 @@
      (start-server/dist-test server))
    ;; Client
    (lambda ()
-     (let ((session (make-session/channel-test))
-           (portnum (get-unused-port)))
-       (and
-        (receive (result pnum)
-            (channel-listen-forward session
-                                    #:address "localhost"
-                                    #:port    portnum)
-          (and (equal? result 'ok)
-               (= pnum portnum)))
-        (eq? (channel-cancel-forward session "localhost" portnum) 'ok))))))
+     (call-with-connected-session/tunnel
+      (lambda (session)
+        (let ((portnum (get-unused-port)))
+          (and
+           (receive (result pnum)
+               (channel-listen-forward session
+                                       #:address "localhost"
+                                       #:port    portnum)
+             (and (equal? result 'ok)
+                  (= pnum portnum)))
+           (eq? (channel-cancel-forward session "localhost" portnum) 'ok))))))))
 
 (test-end "tunnel")
 

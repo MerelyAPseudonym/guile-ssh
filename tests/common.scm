@@ -40,18 +40,20 @@
 
             ;; Procedures
             get-unused-port
+            test-begin-with-log
             test-assert-with-log
-            make-session-loop
+            test-error-with-log
+            test-error-with-log/=
+            test-equal-with-log
+            start-session-loop
             make-session-for-test
             make-server-for-test
             make-libssh-log-printer
+            call-with-connected-session
             start-server-loop
             start-server/dt-test
             start-server/dist-test
             start-server/exec
-            setup-libssh-logging!
-            setup-error-logging!
-            setup-test-suite-logging!
             run-client-test
             run-client-test/separate-process
             run-server-test
@@ -88,11 +90,47 @@
          (set-log-userdata! name)
          body ...)))))
 
-(define-macro (make-session-loop session . body)
-  `(let session-loop ((msg (server-message-get ,session)))
-     (and msg (begin ,@body))
-     (and (connected? session)
-          (session-loop (server-message-get ,session)))))
+;; Ensure that the specific ERROR is raised during the test, check the error
+;; with HANDLER.
+(define-syntax test-error-with-log/handler
+  (syntax-rules ()
+    ((_ name error expr handler)
+     (test-assert-with-log name
+       (catch error
+         (lambda () expr #f)
+         handler)))
+    ((_ name expr handler)
+     (test-assert-with-log name
+       (catch #t
+         (lambda () expr #f)
+         handler)))))
+
+;; Ensure that the specific ERROR is raised during the test and the error is
+;; raised with the specified MESSAGE.
+(define-syntax-rule (test-error-with-log/= name error expected-message expr)
+  (test-error-with-log/handler error expr
+                               (lambda (key . args)
+                                 (string=? (cadr args) expected-message))))
+
+;; Ensure that the specific ERROR is raised during the test.
+(define-syntax test-error-with-log
+  (syntax-rules ()
+    ((_ name error expr)
+     (test-error-with-log/handler name error expr (const #t)))
+    ((_ name expr)
+     (test-error-with-log/handler name expr (const #t)))))
+
+(define-syntax-rule (test-equal-with-log name expected expr)
+  (test-assert-with-log name
+    (equal? expr expected)))
+
+
+(define (start-session-loop session body)
+  (let session-loop ((msg (server-message-get session)))
+    (when (and msg (not (eof-object? msg)))
+      (body msg (message-get-type msg)))
+    (when (connected? session)
+      (session-loop (server-message-get session)))))
 
 (define (make-session-for-test)
   "Make a session with predefined parameters for a test."
@@ -126,6 +164,19 @@
         s))
     (lambda ()
       (unlock-mutex mtx))))
+
+(define (call-with-connected-session proc)
+  "Call the one-argument procedure PROC with a freshly created and connected
+SSH session object, return the result of the procedure call.  The session is
+disconnected when the PROC is finished."
+  (let ((session (make-session-for-test)))
+    (dynamic-wind
+      (lambda ()
+        (let ((result (connect! session)))
+          (unless (equal? result 'ok)
+            (error "Could not connect to a server" session result))))
+      (lambda () (proc session))
+      (lambda () (disconnect! session)))))
 
 
 ;;; Port helpers.
@@ -176,9 +227,9 @@
   (server-listen server)
   (let ((session (server-accept server)))
     (server-handle-key-exchange session)
-    (make-session-loop session
-      (unless (eof-object? msg)
-        (proc msg)))
+    (start-session-loop session
+                        (lambda (msg type)
+                          (proc msg)))
     (primitive-exit)))
 
 
@@ -239,9 +290,9 @@
                         (global-request-callback . ,proc))))
       (session-set! session 'callbacks callbacks))
 
-    (make-session-loop session
-      (unless (eof-object? msg)
-        (message-reply-success msg)))))
+    (start-session-loop session
+                        (lambda (msg type)
+                          (message-reply-success msg)))))
 
 
 ;;; Tests
@@ -416,5 +467,9 @@ printer."
         (errors-log-file (string-append test-name "-errors.log")))
     (setup-libssh-logging! libssh-log-file)
     (setup-error-logging! errors-log-file)))
+
+(define (test-begin-with-log test-name)
+  (test-begin test-name)
+  (setup-test-suite-logging! test-name))
 
 ;;; common.scm ends here

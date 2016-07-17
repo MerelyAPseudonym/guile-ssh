@@ -17,6 +17,8 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with Guile-SSH.  If not, see <http://www.gnu.org/licenses/>.
 
+(add-to-load-path (getenv "abs_top_srcdir"))
+
 (use-modules (srfi srfi-64)
              (srfi srfi-26)
              (ice-9 threads)
@@ -31,9 +33,10 @@
              (ssh channel)
              (ssh log)
              (ssh tunnel)
-             (srfi srfi-4))
+             (srfi srfi-4)
+             (tests common))
 
-(test-begin "client-server")
+(test-begin-with-log "client-server")
 
 
 ;;; Global symbols
@@ -42,16 +45,6 @@
 
 (define log    (test-runner-aux-value (test-runner-current)))
 (define *server-thread* #f)
-
-;;; Load helper procedures
-
-(add-to-load-path (getenv "abs_top_srcdir"))
-(use-modules (tests common))
-
-
-;;; Logging
-
-(setup-test-suite-logging! "client-server")
 
 
 ;;; Helper procedures and macros
@@ -75,65 +68,49 @@
 
 (test-assert-with-log "connect!, disconnect!"
   (run-client-test
-
    ;; server
    simple-server-proc
-
    ;; client
    (lambda ()
-     (let ((session (make-session-for-test)))
-       (sleep 1)
-       (connect! session)
-       (let ((res (connected? session)))
-         (disconnect! session)
-         res)))))
+     (call-with-connected-session
+      (lambda (session)
+        (connected? session))))))
 
-(test-assert-with-log "get-protocol-version"
+(test-equal-with-log "get-protocol-version"
+  2
   (run-client-test
-
    ;; server
    simple-server-proc
-
    ;; client
    (lambda ()
-     (let ((session (make-session-for-test)))
-       (sleep 1)
-       (connect! session)
-       (let ((res (get-protocol-version session)))
-         (disconnect! session)
-         (eq? 2 res))))))
+     (call-with-connected-session
+      (lambda (session)
+        (get-protocol-version session))))))
 
 (test-assert-with-log "authenticate-server, not-known"
+  'not-known
   (run-client-test
-
    ;; server
    simple-server-proc
-
    ;; client
    (lambda ()
-     (let ((session (make-session-for-test)))
-       (sleep 1)
-       (connect! session)
-       (let ((res (authenticate-server session)))
-         (disconnect! session)
-         (eq? res 'not-known))))))
+     (call-with-connected-session
+      (lambda (session)
+       (authenticate-server session))))))
 
-(test-assert-with-log "authenticate-server, ok"
+(test-equal-with-log "authenticate-server, ok"
+  'ok
   (run-client-test
-
    ;; server
    simple-server-proc
-
    ;; client
    (lambda ()
-     (let ((session (make-session-for-test)))
-       (sleep 1)
-       (connect! session)
-       (write-known-host! session)
-       (let ((res (authenticate-server session)))
-         (disconnect! session)
-         (delete-file %knownhosts)
-         (eq? res 'ok))))))
+     (let ((res (call-with-connected-session
+                 (lambda (session)
+                   (write-known-host! session)
+                   (authenticate-server session)))))
+       (delete-file %knownhosts)
+       res))))
 
 (test-assert-with-log "get-public-key-hash"
   (run-client-test
@@ -161,11 +138,27 @@
               (string=? (bytevector->hex-string sha1-res) hash-sha1-str)))))))
 
 
+;;;
 ;;; Authentication
+;;;
+
+
+;;; 'userauth-none!'
+
+;; The procedure called with a wrong object as a parameter which leads to an
+;; exception.
+(test-error-with-log "userauth-none!, wrong parameter" 'wrong-type-arg
+  (userauth-none! "Not a session."))
+
+;; Client tries to authenticate using a non-connected session which leads to
+;; an exception.
+(test-error-with-log "userauth-none!, not connected" 'wrong-type-arg
+  (userauth-none! (make-session-for-test)))
 
 
 ;; Server replies with "success", client receives 'success.
-(test-assert-with-log "userauth-none!, success"
+(test-equal-with-log "userauth-none!, success"
+  'success
   (run-client-test
 
    ;; server
@@ -173,23 +166,22 @@
      (server-listen server)
      (let ((session (server-accept server)))
        (server-handle-key-exchange session)
-       (make-session-loop session
-                          (message-auth-set-methods! msg '(none))
-                          (message-reply-success msg))))
+       (start-session-loop session
+                           (lambda (msg type)
+                             (message-auth-set-methods! msg '(none))
+                             (message-reply-success msg)))))
 
    ;; client
    (lambda ()
-     (let ((session (make-session-for-test)))
-       (sleep 1)
-       (connect! session)
-       (authenticate-server session)
-       (let ((res (userauth-none! session)))
-         (disconnect! session)
-         (eq? res 'success))))))
+     (call-with-connected-session
+      (lambda (session)
+        (authenticate-server session)
+        (userauth-none! session))))))
 
 
 ;; Server replies with "default", client receives 'denied.
-(test-assert-with-log "userauth-none!, denied"
+(test-equal-with-log "userauth-none!, denied"
+  'denied
   (run-client-test
 
    ;; server
@@ -197,23 +189,22 @@
      (server-listen server)
      (let ((session (server-accept server)))
        (server-handle-key-exchange session)
-       (make-session-loop session
-                          (message-auth-set-methods! msg '(public-key))
-                          (message-reply-default msg))))
+       (start-session-loop session
+                           (lambda (msg type)
+                             (message-auth-set-methods! msg '(public-key))
+                             (message-reply-default msg)))))
 
    ;; client
    (lambda ()
-     (let ((session (make-session-for-test)))
-       (sleep 1)
-       (connect! session)
-       (authenticate-server session)
-       (let ((res (userauth-none! session)))
-         (disconnect! session)
-         (eq? res 'denied))))))
+     (call-with-connected-session
+      (lambda (session)
+        (authenticate-server session)
+        (userauth-none! session))))))
 
 
 ;; Server replies with "partial success", client receives 'partial.
-(test-assert-with-log "userauth-none!, partial"
+(test-equal-with-log "userauth-none!, partial"
+  'partial
   (run-client-test
 
    ;; server
@@ -221,22 +212,37 @@
      (server-listen server)
      (let ((session (server-accept server)))
        (server-handle-key-exchange session)
-       (make-session-loop session
-                          (message-auth-set-methods! msg '(none))
-                          (message-reply-success msg 'partial))))
+       (start-session-loop session
+                           (lambda (msg type)
+                             (message-auth-set-methods! msg '(none))
+                             (message-reply-success msg 'partial)))))
 
    ;; client
    (lambda ()
-     (let ((session (make-session-for-test)))
-       (sleep 1)
-       (connect! session)
-       (authenticate-server session)
-       (let ((res (userauth-none! session)))
-         (disconnect! session)
-         (eq? res 'partial))))))
+     (call-with-connected-session
+      (lambda (session)
+        (authenticate-server session)
+        (userauth-none! session))))))
 
 
-(test-assert-with-log "userauth-password!, success"
+;;; 'userauth-password!'
+
+;; The procedure called with a wrong object as a parameter which leads to an
+;; exception.
+(test-error-with-log "userauth-password!, session: non-session object"
+  'wrong-type-arg
+  (userauth-password! "Not a session." "Password"))
+
+;; Client tries to authenticate using a non-connected session which leads to
+;; an exception.
+(test-error-with-log "userauth-password!, session: non-connected session"
+  'wrong-type-arg
+  (userauth-password! (make-session-for-test) "Password"))
+
+;; User tries to authenticate using a non-string object as a password. the
+;; procedure raises an error.
+(test-error-with-log "userauth-password!, password: non-string object"
+  'wrong-type-arg
   (run-client-test
 
    ;; server
@@ -244,22 +250,20 @@
      (server-listen server)
      (let ((session (server-accept server)))
        (server-handle-key-exchange session)
-       (make-session-loop session
-                          (message-auth-set-methods! msg '(password))
-                          (message-reply-success msg))))
+       (start-session-loop session
+                           (lambda (msg type)
+                             (message-auth-set-methods! msg '(password))
+                             (message-reply-success msg)))))
 
    ;; client
    (lambda ()
-     (let ((session (make-session-for-test)))
-       (sleep 1)
-       (connect! session)
-       (authenticate-server session)
-       (let ((res (userauth-password! session "password")))
-         (disconnect! session)
-         (eq? res 'success))))))
+     (call-with-connected-session
+      (lambda (session)
+        (userauth-password! session 123))))))
 
 
-(test-assert-with-log "userauth-password!, denied"
+(test-equal-with-log "userauth-password!, success"
+  'success
   (run-client-test
 
    ;; server
@@ -267,22 +271,21 @@
      (server-listen server)
      (let ((session (server-accept server)))
        (server-handle-key-exchange session)
-       (make-session-loop session
-                          (message-auth-set-methods! msg '(password))
-                          (message-reply-default msg))))
+       (start-session-loop session
+                           (lambda (msg type)
+                             (message-auth-set-methods! msg '(password))
+                             (message-reply-success msg)))))
 
    ;; client
    (lambda ()
-     (let ((session (make-session-for-test)))
-       (sleep 1)
-       (connect! session)
-       (authenticate-server session)
-       (let ((res (userauth-password! session "password")))
-         (disconnect! session)
-         (eq? res 'denied))))))
+     (call-with-connected-session
+      (lambda (session)
+        (authenticate-server session)
+        (userauth-password! session "password"))))))
 
 
-(test-assert-with-log "userauth-password!, partial"
+(test-equal-with-log "userauth-password!, denied"
+  'denied
   (run-client-test
 
    ;; server
@@ -290,22 +293,21 @@
      (server-listen server)
      (let ((session (server-accept server)))
        (server-handle-key-exchange session)
-       (make-session-loop session
-                          (message-auth-set-methods! msg '(password))
-                          (message-reply-success msg 'partial))))
+       (start-session-loop session
+                           (lambda (msg type)
+                             (message-auth-set-methods! msg '(password))
+                             (message-reply-default msg)))))
 
    ;; client
    (lambda ()
-     (let ((session (make-session-for-test)))
-       (sleep 1)
-       (connect! session)
-       (authenticate-server session)
-       (let ((res (userauth-password! session "password")))
-         (disconnect! session)
-         (eq? res 'partial))))))
+     (call-with-connected-session
+      (lambda (session)
+        (authenticate-server session)
+        (userauth-password! session "password"))))))
 
 
-(test-assert-with-log "userauth-public-key!, success"
+(test-equal-with-log "userauth-password!, partial"
+  'partial
   (run-client-test
 
    ;; server
@@ -313,43 +315,127 @@
      (server-listen server)
      (let ((session (server-accept server)))
        (server-handle-key-exchange session)
-       (make-session-loop session
-                          (message-reply-success msg))))
+       (start-session-loop session
+                           (lambda (msg type)
+                             (message-auth-set-methods! msg '(password))
+                             (message-reply-success msg 'partial)))))
 
    ;; client
    (lambda ()
-     (let ((session (make-session-for-test)))
-       (sleep 1)
-       (connect! session)
-       (authenticate-server session)
-       (let* ((prvkey (private-key-from-file %rsakey)))
-         (let ((res (userauth-public-key! session prvkey)))
-           (disconnect! session)
-           (eq? res 'success)))))))
+     (call-with-connected-session
+      (lambda (session)
+        (authenticate-server session)
+        (userauth-password! session "password"))))))
+
+
+;;; 'userauth-public-key!'
+
+;; The procedure called with a wrong object as a parameter which leads to an
+;; exception.
+(test-error-with-log "userauth-public-key!, wrong parameter" 'wrong-type-arg
+  (userauth-public-key! "Not a session." (private-key-from-file %rsakey)))
+
+;; Client tries to authenticate using a non-connected session which leads to
+;; an exception.
+(test-error-with-log "userauth-public-key!, non-connected session"
+  'wrong-type-arg
+  (userauth-public-key! (make-session-for-test)
+                        (private-key-from-file %rsakey)))
+
+;; Client tries to use a non-key object for authentication, the procedure
+;; raises an exception.
+(test-error-with-log "userauth-public-key!, private-key: non-key object"
+  'wrong-type-arg
+  (run-client-test
+   ;; server
+   (lambda (server)
+     (server-listen server)
+     (let ((session (server-accept server)))
+       (server-handle-key-exchange session)
+       (start-session-loop session
+                           (lambda (msg type)
+                             (message-reply-success msg)))))
+   ;; client
+   (lambda ()
+     (call-with-connected-session
+      (lambda (session)
+        (userauth-public-key! session "Non-key object."))))))
+
+;; Client tries to use a public key for authentication, the procedure raises
+;; an exception.
+(test-error-with-log "userauth-public-key!, private-key: public key"
+  'wrong-type-arg
+  (run-client-test
+   ;; server
+   (lambda (server)
+     (server-listen server)
+     (let ((session (server-accept server)))
+       (server-handle-key-exchange session)
+       (start-session-loop session
+                           (lambda (msg type)
+                             (message-reply-success msg)))))
+   ;; client
+   (lambda ()
+     (call-with-connected-session
+      (lambda (session)
+        (userauth-public-key! session (public-key-from-file %rsakey-pub)))))))
+
+
+(test-equal-with-log "userauth-public-key!, success"
+  'success
+  (run-client-test
+
+   ;; server
+   (lambda (server)
+     (server-listen server)
+     (let ((session (server-accept server)))
+       (server-handle-key-exchange session)
+       (start-session-loop session
+                           (lambda (msg type)
+                             (message-reply-success msg)))))
+
+   ;; client
+   (lambda ()
+     (call-with-connected-session
+      (lambda (session)
+        (authenticate-server session)
+        (let ((prvkey (private-key-from-file %rsakey)))
+          (userauth-public-key! session prvkey)))))))
+
+;;;
+
+
+;; The procedure called with a wrong object as a parameter which leads to an
+;; exception.
+(test-error-with-log "userauth-get-list, wrong parameter" 'wrong-type-arg
+  (userauth-get-list "Not a session."))
+
+(test-error-with-log "userauth-get-list, non-connected" 'wrong-type-arg
+  (userauth-get-list (make-session-for-test)))
 
 
 ;; Server replies "default" with the list of allowed authentication
 ;; methods.  Client receives the list.
-(test-assert-with-log "userauth-get-list"
+(test-equal-with-log "userauth-get-list"
+  '(password public-key)
   (run-client-test
 
    ;; server
    (lambda (server)
      (let ((session (server-accept server)))
        (server-handle-key-exchange session)
-       (make-session-loop session
-                          (message-auth-set-methods! msg '(password public-key))
-                          (message-reply-default msg))))
+       (start-session-loop session
+                           (lambda (msg type)
+                             (message-auth-set-methods! msg '(password public-key))
+                             (message-reply-default msg)))))
 
    ;; client
    (lambda ()
-     (let ((session (make-session-for-test)))
-       (sleep 1)
-       (connect! session)
-       (authenticate-server session)
-       (userauth-none! session)
-       (let ((res (userauth-get-list session)))
-         (equal? res '(password public-key)))))))
+     (call-with-connected-session
+      (lambda (session)
+        (authenticate-server session)
+        (userauth-none! session)
+        (userauth-get-list session))))))
 
 
 ;;; Channel test
@@ -466,6 +552,7 @@
 
 ;; Client sends "uname" as a command to execute, server returns exit status 0.
 (test-assert-with-log "channel-request-exec, exit status"
+  0
   (run-client-test
 
    ;; server
@@ -478,7 +565,7 @@
             (channel (make-channel session)))
        (channel-open-session channel)
        (channel-request-exec channel "uname")
-       (= (channel-get-exit-status channel) 0)))))
+       (channel-get-exit-status channel)))))
 
 
 ;; data transferring

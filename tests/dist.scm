@@ -1,6 +1,6 @@
 ;;; dist.scm -- Testing of the distributed forms
 
-;; Copyright (C) 2015 Artyom V. Poptsov <poptsov.artyom@gmail.com>
+;; Copyright (C) 2015, 2016 Artyom V. Poptsov <poptsov.artyom@gmail.com>
 ;;
 ;; This file is a part of Guile-SSH.
 ;;
@@ -17,6 +17,8 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with Guile-SSH.  If not, see <http://www.gnu.org/licenses/>.
 
+(add-to-load-path (getenv "abs_top_srcdir"))
+
 (use-modules (srfi srfi-64)
              (ice-9 receive)
              (ice-9 rdelim)
@@ -28,19 +30,10 @@
              (ssh  log)
              (ssh  dist)
              (ssh  dist job)
-             (ssh  dist node))
+             (ssh  dist node)
+             (tests common))
 
-(test-begin "dist")
-
-;;; Load helper procedures
-
-(add-to-load-path (getenv "abs_top_srcdir"))
-(use-modules (tests common))
-
-
-;;; Logging
-
-(setup-test-suite-logging! "dist")
+(test-begin-with-log "dist")
 
 ;;;
 
@@ -52,10 +45,16 @@
          (eq? (node-repl-port n) 37146)
          (eq? (node-session n)   s))))
 
-(test-assert "split"
-  (and (equal? (split '(a b c d e f g) 3) '((a b) (c d) (e f g)))
-       (equal? (split '(a) 2) '((a)))))
+
+(test-equal "split, 1"
+  '((a b) (c d) (e f g))
+  (split '(a b c d e f g) 3))
 
+(test-equal "split, 2"
+  '((a))
+  (split '(a) 2))
+
+
 (test-assert "make-job"
   (let* ((s (make-session-for-test))
          (n (make-node s))
@@ -81,6 +80,10 @@
          (eq? (job-node j2) n2)
          (eq? (job-data j1) (job-data j2))
          (eq? (job-proc j1) (job-proc j2)))))
+
+(test-error-with-log "hand-out-job, invalid type"
+  (let ((n (make-node (make-session-for-test))))
+    (hand-out-job (make-job 'invalid-job n '() (const #t)))))
 
 
 (test-assert "assign-eval"
@@ -115,14 +118,10 @@
          (string=? module-name "(guile-user)")
          (string=? lang        "scheme"))))
 
-(test-assert "rrepl-get-result, error"
-  (catch 'node-repl-error
-         (lambda ()
-           (call-with-input-string "scheme@(guile-user)> ERROR: error."
-                                   rrepl-get-result)
-           #f)
-         (lambda (key . args)
-           (string=? (cadr args) "scheme@(guile-user)> ERROR: error."))))
+(test-error-with-log/= "rrepl-get-result, error"
+  'node-repl-error "scheme@(guile-user)> ERROR: error."
+  (call-with-input-string "scheme@(guile-user)> ERROR: error."
+                          rrepl-get-result))
 
 (test-assert "rrepl-get-result, elisp"
   (receive (result eval-num module-name lang)
@@ -154,14 +153,10 @@
         (rrepl-skip-to-prompt port)))
     #t))
 
-(test-assert "rrepl-skip-to-prompt, invalid input"
-  (catch 'node-error
-    (lambda ()
-      (call-with-input-string "invalid input"
-        (lambda (port)
-          (rrepl-skip-to-prompt port)))
-      #f)
-    (const #t)))
+(test-error-with-log "rrepl-skip-to-prompt, invalid input" 'node-error
+  (call-with-input-string "invalid input"
+                          (lambda (port)
+                            (rrepl-skip-to-prompt port))))
 
 
 ;;; Distributed forms.
@@ -177,57 +172,52 @@
      (server-set! server 'log-verbosity 'functions)
      (let ((session (server-accept server)))
        (server-handle-key-exchange session)
-       (make-session-loop session
-         (unless (eof-object? msg)
-           (let ((type (message-get-type msg)))
-             (case (car type)
-               ((request-channel-open)
-                (let ((c (message-channel-request-open-reply-accept msg)))
+       (start-session-loop
+        session
+        (lambda (msg type)
+          (case (car type)
+            ((request-channel-open)
+             (let ((c (message-channel-request-open-reply-accept msg)))
 
-                  ;; Write the last line of Guile REPL greeting message to
-                  ;; pretend that we're a REPL server.
-                  (write-line "Enter `,help' for help." c)
+               ;; Write the last line of Guile REPL greeting message to
+               ;; pretend that we're a REPL server.
+               (write-line "Enter `,help' for help." c)
 
-                  (usleep 100)
-                  (poll c
-                        (lambda args
-                          ;; Read expression
-                          (let ((result (read-line c)))
-                            (format-log 'nolog "server"
-                                        "[SCM] sexp: ~a" result)
-                            (or (string=? result "(begin (+ 21 21))")
-                                (error "Wrong result 1" result)))
+               (usleep 100)
+               (poll c
+                     (lambda args
+                       ;; Read expression
+                       (let ((result (read-line c)))
+                         (format-log 'nolog "server"
+                                     "[SCM] sexp: ~a" result)
+                         (or (string=? result "(begin (+ 21 21))")
+                             (error "Wrong result 1" result)))
 
-                          ;; Read newline
-                          (let ((result (read-line c)))
-                            (format-log 'nolog "server"
-                                        "[SCM] sexp: ~a" result)
-                            (or (string=? result "(newline)")
-                                (error "Wrong result 2" result)))
+                       ;; Read newline
+                       (let ((result (read-line c)))
+                         (format-log 'nolog "server"
+                                     "[SCM] sexp: ~a" result)
+                         (or (string=? result "(newline)")
+                             (error "Wrong result 2" result)))
 
-                          (write-line "scheme@(guile-user)> $1 = 42\n" c)
+                       (write-line "scheme@(guile-user)> $1 = 42\n" c)
 
-                          (sleep 60)))))
-               (else
-                (message-reply-success msg))))))))
+                       (sleep 60)))))
+            (else
+             (message-reply-success msg)))))))
    ;; Client
    (lambda ()
-     (let ((session (make-session-for-test)))
-       (session-set! session 'log-verbosity 'functions)
+     (call-with-connected-session
+      (lambda (session)
+        (authenticate-server session)
 
-       (let ((result (connect! session)))
-         (or (equal? result 'ok)
-             (error "Could not connect to a server" session result)))
+        (unless (equal? (userauth-none! session) 'success)
+          (error "Could not authenticate with a server" session))
 
-       (authenticate-server session)
-
-       (or (equal? (userauth-none! session) 'success)
-           (error "Could not authenticate with a server" session))
-
-       (let ((n (make-node session #:start-repl-server? #f)))
-         (= (with-ssh n
-              (+ 21 21))
-            42))))))
+        (let ((n (make-node session #:start-repl-server? #f)))
+          (= (with-ssh n
+                       (+ 21 21))
+             42)))))))
 
 ;;;
 
