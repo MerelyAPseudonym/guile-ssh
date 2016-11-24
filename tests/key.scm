@@ -87,11 +87,11 @@
        (when-openssl
         (private-key->public-key *ecdsa-key*))))
 
-(test-assert-with-log "get-key-type"
-  (and (eq? 'rsa   (get-key-type *rsa-key*))
-       (eq? 'dss   (get-key-type *dsa-key*))
+(test-assert-with-log "key-type"
+  (and (eq? 'rsa   (key-type *rsa-key*))
+       (eq? 'dss   (key-type *dsa-key*))
        (when-openssl
-        (eq? 'ecdsa (get-key-type *ecdsa-key*)))))
+        (eq? 'ecdsa (key-type *ecdsa-key*)))))
 
 
 (test-assert-with-log "private-key-to-file"

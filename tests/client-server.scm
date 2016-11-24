@@ -112,7 +112,7 @@
        (delete-file %knownhosts)
        res))))
 
-(test-assert-with-log "get-public-key-hash"
+(test-assert-with-log "public-key-hash"
   (run-client-test
 
    ;; server
@@ -129,8 +129,8 @@
        (connect! session)
        (authenticate-server session)
        (let* ((pubkey   (get-server-public-key session))
-              (md5-res  (get-public-key-hash pubkey 'md5))
-              (sha1-res (get-public-key-hash pubkey 'sha1)))
+              (md5-res  (public-key-hash pubkey 'md5))
+              (sha1-res (public-key-hash pubkey 'sha1)))
          (disconnect! session)
          (and (bytevector=? md5-res hash-md5-bv)
               (string=? (bytevector->hex-string md5-res) hash-md5-str)
@@ -519,7 +519,7 @@
      (call-with-connected-session/channel-test
       make-channel))))
 
-(test-assert-with-log "channel-get-session"
+(test-assert-with-log "channel-session"
   (run-client-test
 
    ;; server
@@ -531,7 +531,7 @@
      (call-with-connected-session/channel-test
       (lambda (session)
         (let ((channel (make-channel session)))
-          (eq? session (channel-get-session channel))))))))
+          (eq? session (channel-session channel))))))))
 
 (test-assert-with-log "channel-open-session"
   (run-client-test
