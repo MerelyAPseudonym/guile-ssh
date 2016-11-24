@@ -242,14 +242,9 @@ static struct symbol_mapping hash_types[] = {
   { NULL,   -1                      }
 };
 
-SCM_DEFINE (guile_ssh_get_public_key_hash, "get-public-key-hash", 2, 0, 0,
-            (SCM key, SCM type),
-            "\
-Get hash of the public KEY as a bytevector.\n\
-Possible types are: 'sha1, 'md5\n\
-Return a bytevector on success, #f on error.\
-")
-#define FUNC_NAME s_guile_ssh_get_public_key_hash
+SCM_GSSH_DEFINE (gssh_public_key_hash, "%gssh-public-key-hash", 2,
+                 (SCM key, SCM type))
+#define FUNC_NAME s_gssh_public_key_hash
 {
   struct key_data *kd = _scm_to_key_data (key);
   unsigned char *hash = NULL;

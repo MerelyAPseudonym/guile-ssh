@@ -75,7 +75,7 @@ static int
 print_key (SCM smob, SCM port, scm_print_state *pstate)
 {
   struct key_data *key_data = _scm_to_key_data (smob);
-  SCM type = guile_ssh_key_get_type (smob);
+  SCM type = gssh_key_type (smob);
 
   scm_puts ("#<key ", port);
   scm_display (type, port);
@@ -108,12 +108,7 @@ _scm_to_ssh_key_type (SCM type)
 
    Return a key type as a Scheme symbol.  The type can be one of the
    following list: 'dss, 'rsa, 'rsa1, 'unknown */
-SCM_DEFINE (guile_ssh_key_get_type, "get-key-type", 1, 0, 0,
-            (SCM key),
-            "\
-Get a symbol that represents the type of the SSH key KEY.\n\
-Possible types are: 'dss, 'rsa, 'rsa1, 'ecdsa, 'unknown\
-")
+SCM_GSSH_DEFINE (gssh_key_type, "%gssh-key-type", 1, (SCM key))
 {
   struct key_data *data = _scm_to_key_data (key);
   enum ssh_keytypes_e type = ssh_key_type (data->ssh_key);

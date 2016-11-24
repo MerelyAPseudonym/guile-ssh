@@ -77,12 +77,12 @@ Read public key from a @var{file}.  Return a public key or @code{#f}
 on error.
 @end deffn
 
-@deffn {Scheme Procedure} get-key-type key
+@deffn {Scheme Procedure} key-type key
 Get a symbol that represents the type of the Guile-SSH @var{key}.
 Possible types are: @code{dss}, @code{rsa}, @code{rsa1}, @code{unknown}.
 @end deffn
 
-@deffn {Scheme Procedure} get-public-key-hash public-key type
+@deffn {Scheme Procedure} public-key-hash public-key type
 @cindex fingerprint
 @tindex fingerprint
 Get a @var{public-key} hash of @var{type} as a bytevector.  Return the

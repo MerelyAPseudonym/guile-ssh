@@ -41,7 +41,7 @@ extern SCM guile_ssh_is_key_p (SCM arg1);
 extern SCM guile_ssh_is_public_key_p (SCM arg1);
 extern SCM guile_ssh_is_private_key_p (SCM arg1);
 
-extern SCM guile_ssh_key_get_type (SCM arg1);
+extern SCM gssh_key_type (SCM arg1);
 
 extern void init_key_type (void);
 

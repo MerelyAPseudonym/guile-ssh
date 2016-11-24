@@ -28,14 +28,14 @@
 ;;   public-key?
 ;;   private-key?
 ;;   make-keypair
-;;   get-key-type
+;;   key-type
 ;;   public-key->string
 ;;   string->pubilc-key
 ;;   public-key-from-file
 ;;   private-key->public-key
 ;;   private-key-from-file
 ;;   private-key-to-file
-;;   get-public-key-hash
+;;   public-key-hash
 ;;   bytevector->hex-string
 
 
@@ -50,14 +50,16 @@
             public-key?
             private-key?
             make-keypair
-            get-key-type
+            key-type
+            get-key-type                ; deprecated
             public-key->string
             string->public-key
             public-key-from-file
             private-key->public-key
             private-key-from-file
             private-key-to-file
-            get-public-key-hash
+            public-key-hash
+            get-public-key-hash         ; deprecated
             bytevector->hex-string))
 
 (define (bytevector->hex-string bv)
@@ -66,6 +68,29 @@
                     (bytevector->u8-list bv))
                ":"))
 
+
+(define (key-type key)
+  "Get a symbol that represents the type of the SSH key KEY.
+Possible types are: 'dss, 'rsa, 'rsa1, 'ecdsa, 'unknown"
+  (%gssh-key-type key))
+
+(define (get-key-type key)
+  (issue-deprecation-warning "'get-key-type' is deprecated.  "
+                             "Use 'key-type' instead.'")
+  (%gssh-key-type key))
+
+
+(define (public-key-hash key type)
+  "Get hash of the public KEY as a bytevector.  Possible types are: 'sha1,
+'md5.  Return a bytevector on success, #f on error."
+  (%gssh-public-key-hash key type))
+
+(define (get-public-key-hash key type)
+  (issue-deprecation-warning "'get-public-key-hash' is deprecated.  "
+                             "Use 'public-key-hash' instead.'")
+  (%gssh-public-key-hash key type))
+
+
 (load-extension "libguile-ssh" "init_key")
 
 ;;; key.scm ends here.

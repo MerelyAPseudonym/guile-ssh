@@ -7,6 +7,12 @@ Copyright (C) Artyom V. Poptsov <poptsov.artyom@gmail.com>
   are permitted in any medium without royalty provided the copyright
   notice and this notice are preserved.
 
+* Unreleased
+** Deprecation
+*** In (ssh key)
+    - 'get-key-type' (use 'key-type' instead)
+    - 'get-public-key-hash' (use 'public-key-hash' instead)
+
 * Changes in version 0.10.2 (2016-11-25)
 ** New procedures
 *** New procedure 'channel-send-eof' in (ssh channel)

@@ -164,6 +164,9 @@
           (and (key? key)
                (eq? (get-key-type key) 'ecdsa))))))
 
+(test-assert-with-log "public-key-hash"
+  (public-key-hash (make-keypair 'rsa 128) 'sha1))
+
 ;;;
 
 (test-end "key")
