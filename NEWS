@@ -8,10 +8,12 @@ Copyright (C) Artyom V. Poptsov <poptsov.artyom@gmail.com>
   notice and this notice are preserved.
 
 * Unreleased
-** Deprecation
 *** In (ssh key)
     - 'get-key-type' (use 'key-type' instead)
     - 'get-public-key-hash' (use 'public-key-hash' instead)
+*** In (ssh channel)
+    - 'channel-get-stream (use 'channel-stream' instead)
+    - 'channel-get-session' (use 'channel-session' instead)
 
 * Changes in version 0.10.2 (2016-11-25)
 ** New procedures

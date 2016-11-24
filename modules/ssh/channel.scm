@@ -37,7 +37,8 @@
 ;;   channel-cancel-forward
 ;;   channel-set-pty-size!
 ;;   channel-set-stream!
-;;   channel-get-stream
+;;   channel-stream
+;;   channel-session
 ;;   channel-open?
 ;;   channel-send-eof
 ;;   channel-eof?
@@ -63,8 +64,10 @@
             channel-request-send-exit-status
             channel-set-pty-size!
             channel-set-stream!
-            channel-get-stream
-            channel-get-session
+            channel-stream
+            channel-get-stream          ; deprecated
+            channel-session
+            channel-get-session         ; deprecated
             channel-get-exit-status
             channel-open?
             channel-send-eof
@@ -80,6 +83,27 @@
      (%make-channel session WRTNG))
     (else
      (throw 'guile-ssh-error "Wrong mode" mode))))
+
+
+(define (channel-session channel)
+  "Get the session to which belongs the CHANNEL.  Throw 'guile-ssh-error' on
+an error.  Return the session."
+  (%gssh-channel-session channel))
+
+(define (channel-get-session channel)
+  (issue-deprecation-warning "'channel-get-session' is deprecated.  "
+                             "Use 'channel-session' instead.")
+  (%gssh-channel-session channel))
+
+(define (channel-stream channel)
+  "Get current stream name from a CHANNEL.  Throw 'guile-ssh-error' on error.
+Return one of the following symbols: stdout, stderr."
+  (%gssh-channel-stream channel))
+
+(define (channel-get-stream channel)
+  (issue-deprecation-warning "'channel-get-stream' is deprecated.  "
+                             "Use 'channel-stream' instead.")
+  (%gssh-channel-stream channel))
 
 
 (define* (channel-open-forward channel

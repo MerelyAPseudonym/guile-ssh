@@ -425,14 +425,9 @@ Return value is undefined.\
 }
 #undef FUNC_NAME
 
-SCM_DEFINE (guile_ssh_channel_get_stream,
-            "channel-get-stream", 1, 0, 0,
-            (SCM channel),
-            "\
-Get current stream name from CHANNEL.  Throw `guile-ssh-error' on error.\n\
-Return one of the following symbols: \"stdout\", \"stderr\".\
-")
-#define FUNC_NAME s_guile_ssh_channel_get_stream
+SCM_GSSH_DEFINE (gssh_channel_stream, "%gssh-channel-stream", 1,
+                 (SCM channel))
+#define FUNC_NAME s_gssh_channel_stream
 {
   struct channel_data *cd = _scm_to_channel_data (channel);
 
@@ -450,14 +445,9 @@ Return one of the following symbols: \"stdout\", \"stderr\".\
 }
 #undef FUNC_NAME
 
-SCM_DEFINE (guile_ssh_channel_get_session,
-            "channel-get-session", 1, 0, 0,
-            (SCM channel),
-            "\
-Get the session to which belongs the CHANNEL.  Throw `guile-ssh-error' on an \n\
-error.  Return the session.\
-")
-#define FUNC_NAME s_guile_ssh_channel_get_session
+SCM_GSSH_DEFINE (gssh_channel_session, "%gssh-channel-session", 1,
+                 (SCM channel))
+#define FUNC_NAME s_gssh_channel_session
 {
   struct channel_data *cd = _scm_to_channel_data (channel);
   GSSH_VALIDATE_CHANNEL_DATA (cd, channel, FUNC_NAME);
