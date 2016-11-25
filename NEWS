@@ -13,6 +13,7 @@ Copyright (C) Artyom V. Poptsov <poptsov.artyom@gmail.com>
     - 'get-public-key-hash' (use 'public-key-hash' instead)
 *** In (ssh channel)
     - 'channel-get-stream (use 'channel-stream' instead)
+    - 'channel-set-stream!' (use 'channel-stream-set!' instead)
     - 'channel-get-session' (use 'channel-session' instead)
 
 * Changes in version 0.10.2 (2016-11-25)
