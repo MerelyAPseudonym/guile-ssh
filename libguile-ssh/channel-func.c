@@ -391,15 +391,10 @@ eturn value is undefined.\
 }
 #undef FUNC_NAME
 
-SCM_DEFINE (guile_ssh_channel_set_stream_x,
-            "channel-set-stream!", 2, 0, 0,
-            (SCM channel, SCM stream_name),
-            "\
-Set stream STREAM_NAME for channel CHANNEL.  STREAM_NAME must be one of the \n\
-following symbols: \"stdout\" (default), \"stderr\".\n\
-Return value is undefined.\
-")
-#define FUNC_NAME s_guile_ssh_channel_set_stream_x
+SCM_GSSH_DEFINE (gssh_channel_stream_set_x,
+                 "%gssh-channel-stream-set!", 2,
+                 (SCM channel, SCM stream_name))
+#define FUNC_NAME s_gssh_channel_stream_set_x
 {
   struct channel_data *cd = _scm_to_channel_data (channel);
 

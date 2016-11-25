@@ -63,7 +63,8 @@
             channel-cancel-forward
             channel-request-send-exit-status
             channel-set-pty-size!
-            channel-set-stream!
+            channel-stream-set!
+            channel-set-stream!         ; deprecated
             channel-stream
             channel-get-stream          ; deprecated
             channel-session
@@ -104,6 +105,16 @@ Return one of the following symbols: stdout, stderr."
   (issue-deprecation-warning "'channel-get-stream' is deprecated.  "
                              "Use 'channel-stream' instead.")
   (%gssh-channel-stream channel))
+
+(define (channel-stream-set! channel stream)
+  "Set stream STREAM for channel CHANNEL.  STREAM must be one of the following
+symbols: stdout (default), stderr.  Return value is undefined."
+  (%gssh-channel-stream-set! channel stream))
+
+(define (channel-set-stream! channel stream)
+  (issue-deprecation-warning "'channel-get-stream' is deprecated.  "
+                             "Use 'channel-stream' instead.")
+  (%gssh-channel-stream-set! channel stream))
 
 
 (define* (channel-open-forward channel

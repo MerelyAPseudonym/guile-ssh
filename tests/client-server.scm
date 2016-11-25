@@ -670,6 +670,19 @@
                (not (output-port? channel))
                (string=? (read-line channel) str))))))))
 
+(test-assert-with-log "channel-stream"
+  (run-client-test
+   (lambda (server)
+     (start-server/dt-test server
+                           (lambda (channel)
+                             (let ((str (read-line channel)))
+                               (write-line str channel)))))
+   (lambda ()
+     (call-with-connected-session/channel-test
+      (lambda (session)
+        (let ((c (make-channel/dt-test session)))
+          (equal? (channel-stream c) 'stdout)))))))
+
 
 ;;;
 
