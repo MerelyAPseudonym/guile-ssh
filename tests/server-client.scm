@@ -87,7 +87,7 @@
          (message? msg))))))
 
 
-(test-assert-with-log "message-get-type"
+(test-assert-with-log "message-type"
   (run-server-test
 
    ;; client
@@ -106,7 +106,7 @@
      (let ((session (server-accept server)))
        (server-handle-key-exchange session)
        (let ((msg (server-message-get session)))
-         (let ((msg-type (message-get-type msg))
+         (let ((msg-type (message-type msg))
                (expected-type '(request-service)))
            (message-auth-set-methods! msg '(none))
            (message-reply-success msg)
@@ -114,7 +114,7 @@
            (equal? msg-type expected-type)))))))
 
 
-(test-assert-with-log "message-get-session"
+(test-assert-with-log "message-session"
   (run-server-test
 
    ;; client
@@ -133,7 +133,7 @@
      (let ((session (server-accept server)))
        (server-handle-key-exchange session)
        (let* ((msg (server-message-get session))
-              (x   (message-get-session msg)))
+              (x   (message-session msg)))
          (message-auth-set-methods! msg '(none))
          (message-reply-success msg)
          (disconnect! x)

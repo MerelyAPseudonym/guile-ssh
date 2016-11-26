@@ -41,9 +41,11 @@
             message?
             message-reply-default
             message-reply-success
-            message-get-type
+            message-type
+            message-get-type            ; deprecated
             message-get-req
-            message-get-session
+            message-session
+            message-get-session         ; deprecated.
 
             message-service-reply-success
             service-req:service
@@ -100,6 +102,26 @@
 (define (global-req:port req) (vector-ref req 1))
 
 (define (subsystem-req:subsystem req) (vector-ref req 0))
+
+
+(define (message-type message)
+  "Get type of a MESSAGE."
+  (%gssh-message-type message))
+
+(define (message-get-type message)
+  (issue-deprecation-warning "'message-get-type' is deprecated."
+                             "  Use 'message-type' instead.")
+  (%gssh-message-type message))
+
+(define (message-session message)
+  "Get the session from which the MESSAGE was received.  Return the session."
+  (%gssh-message-session message))
+
+(define (message-get-session message)
+  (issue-deprecation-warning "'message-get-session' is deprecated."
+                             "  Use 'message-session' instead.")
+  (%gssh-message-session message))
+
 
 
 (define (message-reply-success msg . args)

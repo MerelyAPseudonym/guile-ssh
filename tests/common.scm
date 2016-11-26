@@ -128,7 +128,7 @@
 (define (start-session-loop session body)
   (let session-loop ((msg (server-message-get session)))
     (when (and msg (not (eof-object? msg)))
-      (body msg (message-get-type msg)))
+      (body msg (message-type msg)))
     (when (connected? session)
       (session-loop (server-message-get session)))))
 
@@ -236,7 +236,7 @@ disconnected when the PROC is finished."
 (define (start-server/dt-test server rwproc)
   (start-server-loop server
     (lambda (msg)
-      (case (car (message-get-type msg))
+      (case (car (message-type msg))
         ((request-channel-open)
          (let ((channel (message-channel-request-open-reply-accept msg)))
            (poll channel rwproc)))
@@ -248,7 +248,7 @@ disconnected when the PROC is finished."
   (start-server-loop server
     (let ((channel #f))
       (lambda (msg)
-        (let ((msg-type (message-get-type msg)))
+        (let ((msg-type (message-type msg)))
           (case (car msg-type)
             ((request-channel-open)
              (set! channel (message-channel-request-open-reply-accept msg)))
@@ -273,7 +273,7 @@ disconnected when the PROC is finished."
     (server-handle-key-exchange session)
 
     (let* ((proc (lambda (session message user-data)
-                   (let ((type (message-get-type message))
+                   (let ((type (message-type message))
                          (req  (message-get-req  message)))
                      (format (current-error-port) "global req: type: ~a~%"
                              type)

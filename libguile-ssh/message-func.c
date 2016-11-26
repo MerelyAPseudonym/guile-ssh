@@ -264,12 +264,7 @@ _ssh_message_type_to_scm (ssh_message msg)
 }
 
 
-SCM_DEFINE (guile_ssh_message_get_type,
-            "message-get-type", 1, 0, 0,
-            (SCM msg),
-            "\
-Get type of the message MSG.\
-")
+SCM_GSSH_DEFINE (gssh_message_type, "%gssh-message-type", 1, (SCM msg))
 {
   struct message_data *message_data = _scm_to_message_data (msg);
   return _ssh_message_type_to_scm (message_data->message);
@@ -531,12 +526,8 @@ Return value is undefined.\
 #undef FUNC_NAME
 
 
-SCM_DEFINE (guile_ssh_message_get_session,
-            "message-get-session", 1, 0, 0,
-            (SCM message),
-            "\
-Get the session from which the MESSAGE was received.  Return the session.\
-")
+SCM_GSSH_DEFINE (gssh_message_session, "%gssh-message-session", 1,
+                 (SCM message))
 {
   struct message_data *md = _scm_to_message_data (message);
   return md->session;

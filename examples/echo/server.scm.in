@@ -190,7 +190,7 @@ Options:
           ;; Handle messages from the connected SSH client.
           (let session-loop ((msg (server-message-get session)))
             (if msg
-                (let ((msg-type (message-get-type msg)))
+                (let ((msg-type (message-type msg)))
                   (format #t "Message: ~a~%" msg-type)
                   ;; Check the type of the message
                   (case (car msg-type)

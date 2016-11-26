@@ -463,7 +463,7 @@
   (start-server-loop server
     (let ((channel #f))
       (lambda (msg)
-        (let ((msg-type (message-get-type msg)))
+        (let ((msg-type (message-type msg)))
           (srvmsg msg-type)
           (case (car msg-type)
             ((request-channel-open)

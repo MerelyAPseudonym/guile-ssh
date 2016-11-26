@@ -314,7 +314,7 @@ Options:
           (if (not msg)
               (error (get-error session)))
 
-          (let ((msg-type (message-get-type msg)))
+          (let ((msg-type (message-type msg)))
 
             (format #t "Message type: ~a~%" msg-type)
 
