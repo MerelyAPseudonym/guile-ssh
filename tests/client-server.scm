@@ -168,7 +168,7 @@
        (server-handle-key-exchange session)
        (start-session-loop session
                            (lambda (msg type)
-                             (message-auth-set-methods! msg '(none))
+                             (message-auth-methods-set! msg '(none))
                              (message-reply-success msg)))))
 
    ;; client
@@ -191,7 +191,7 @@
        (server-handle-key-exchange session)
        (start-session-loop session
                            (lambda (msg type)
-                             (message-auth-set-methods! msg '(public-key))
+                             (message-auth-methods-set! msg '(public-key))
                              (message-reply-default msg)))))
 
    ;; client
@@ -214,7 +214,7 @@
        (server-handle-key-exchange session)
        (start-session-loop session
                            (lambda (msg type)
-                             (message-auth-set-methods! msg '(none))
+                             (message-auth-methods-set! msg '(none))
                              (message-reply-success msg 'partial)))))
 
    ;; client
@@ -252,7 +252,7 @@
        (server-handle-key-exchange session)
        (start-session-loop session
                            (lambda (msg type)
-                             (message-auth-set-methods! msg '(password))
+                             (message-auth-methods-set! msg '(password))
                              (message-reply-success msg)))))
 
    ;; client
@@ -273,7 +273,7 @@
        (server-handle-key-exchange session)
        (start-session-loop session
                            (lambda (msg type)
-                             (message-auth-set-methods! msg '(password))
+                             (message-auth-methods-set! msg '(password))
                              (message-reply-success msg)))))
 
    ;; client
@@ -295,7 +295,7 @@
        (server-handle-key-exchange session)
        (start-session-loop session
                            (lambda (msg type)
-                             (message-auth-set-methods! msg '(password))
+                             (message-auth-methods-set! msg '(password))
                              (message-reply-default msg)))))
 
    ;; client
@@ -317,7 +317,7 @@
        (server-handle-key-exchange session)
        (start-session-loop session
                            (lambda (msg type)
-                             (message-auth-set-methods! msg '(password))
+                             (message-auth-methods-set! msg '(password))
                              (message-reply-success msg 'partial)))))
 
    ;; client
@@ -442,7 +442,7 @@
        (server-handle-key-exchange session)
        (start-session-loop session
                            (lambda (msg type)
-                             (message-auth-set-methods! msg '(password public-key))
+                             (message-auth-methods-set! msg '(password public-key))
                              (message-reply-default msg)))))
 
    ;; client

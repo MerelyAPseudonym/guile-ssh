@@ -1,4 +1,4 @@
-;;; client-server.scm -- Guile-SSH server is SUT.
+ ;;; client-server.scm -- Guile-SSH server is SUT.
 
 ;; Copyright (C) 2014, 2015 Artyom V. Poptsov <poptsov.artyom@gmail.com>
 ;;
@@ -82,7 +82,7 @@
      (let ((session (server-accept server)))
        (server-handle-key-exchange session)
        (let ((msg (server-message-get session)))
-         (message-auth-set-methods! msg '(none))
+         (message-auth-methods-set! msg '(none))
          (message-reply-success msg)
          (message? msg))))))
 
@@ -108,7 +108,7 @@
        (let ((msg (server-message-get session)))
          (let ((msg-type (message-type msg))
                (expected-type '(request-service)))
-           (message-auth-set-methods! msg '(none))
+           (message-auth-methods-set! msg '(none))
            (message-reply-success msg)
            (disconnect! session)
            (equal? msg-type expected-type)))))))
@@ -134,7 +134,7 @@
        (server-handle-key-exchange session)
        (let* ((msg (server-message-get session))
               (x   (message-session msg)))
-         (message-auth-set-methods! msg '(none))
+         (message-auth-methods-set! msg '(none))
          (message-reply-success msg)
          (disconnect! x)
          (equal? x session))))))

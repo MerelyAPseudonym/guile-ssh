@@ -19,6 +19,7 @@ Copyright (C) Artyom V. Poptsov <poptsov.artyom@gmail.com>
 *** In (ssh message)
     - 'message-get-type'  (use 'message-type' instead)
     - 'message-get-session' (use 'message-session' instead)
+    - 'message-auth-set-methods!' (use 'message-auth-methods-set!' instead)
 
 * Changes in version 0.10.2 (2016-11-25)
 ** New procedures

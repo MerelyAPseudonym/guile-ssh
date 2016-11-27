@@ -55,7 +55,8 @@
 
             message-auth-reply-success
             message-auth-reply-public-key-ok
-            message-auth-set-methods!
+            message-auth-methods-set!
+            message-auth-set-methods!   ; deprecated
             auth-req:user auth-req:password auth-req:pubkey
             auth-req:pubkey-state
 
@@ -122,6 +123,14 @@
                              "  Use 'message-session' instead.")
   (%gssh-message-session message))
 
+(define (message-auth-methods-set! message methods-list)
+  "Set authentication methods to METHODS-LIST.  Return value is undefined."
+  (%gssh-message-auth-methods-set! message methods-list))
+
+(define (message-auth-set-methods! message methods-list)
+  (issue-deprecation-warning "'message-auth-set-methods!' is deprecated."
+                             "  Use 'message-auth-methods-set!' instead.")
+  (%gssh-message-auth-methods-set! message methods-list))
 
 
 (define (message-reply-success msg . args)

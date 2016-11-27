@@ -487,14 +487,10 @@ _scm_member_p (SCM elem, SCM lst)
   return scm_is_true (scm_member (elem, lst));
 }
 
-SCM_DEFINE (guile_ssh_message_auth_set_methods_x,
-            "message-auth-set-methods!", 2, 0, 0,
-            (SCM msg, SCM methods_list),
-            "\
-Set authentication methods.\n\
-Return value is undefined.\
-")
-#define FUNC_NAME s_guile_ssh_message_auth_set_methods_x
+SCM_GSSH_DEFINE (gssh_message_auth_methods_set_x,
+                 "%gssh-message-auth-methods-set!", 2,
+                 (SCM msg, SCM methods_list))
+#define FUNC_NAME s_gssh_message_auth_methods_set_x
 {
   struct message_data *message_data = _scm_to_message_data (msg);
   int methods = 0;
