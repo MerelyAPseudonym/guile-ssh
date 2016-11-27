@@ -128,7 +128,7 @@
   "Reply 'success' to the message MSG.  This procedure is a convenient
 wrapper for other '*-reply-success' procedures.  The right procedure
 to use will be selected depending on a type of the message MSG."
-  (let ((msg-type (message-get-type msg)))
+  (let ((msg-type (message-type msg)))
     (case (car msg-type)
 
       ((request-auth)
