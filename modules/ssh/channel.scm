@@ -36,7 +36,7 @@
 ;;   channel-open-forward
 ;;   channel-cancel-forward
 ;;   channel-set-pty-size!
-;;   channel-set-stream!
+;;   channel-stream-set!
 ;;   channel-stream
 ;;   channel-session
 ;;   channel-open?
