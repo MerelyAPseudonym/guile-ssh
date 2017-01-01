@@ -381,7 +381,7 @@ set_option (SCM scm_session, struct session_data* sd, int type, SCM value)
 }
 
 /* Set a SSH option.  Return #t on success, #f on error. */
-SCM_DEFINE (guile_ssh_session_set, "session-set!", 3, 0, 0,
+SCM_DEFINE (guile_ssh_session_set, "%session-set!", 3, 0, 0,
             (SCM session, SCM option, SCM value),
             "\
 Set a SSH option OPTION.  Throw an guile-ssh-error on error.\n\

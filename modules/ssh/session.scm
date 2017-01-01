@@ -53,6 +53,7 @@
             session-parse-config!
 	    blocking-flush!
             session-set!
+            %session-set!
             session-get
             get-protocol-version
             connect!
@@ -65,19 +66,25 @@
 
 ;; Set a SSH option if it is specified by the user
 (define-macro (session-set-if-specified! option)
-  `(if ,option (session-set! session (quote ,option) ,option)))
+  `(if ,option (%session-set! session (quote ,option) ,option)))
 
-;; This procedure is more convenient than primitive `%make-session',
-;; but on other hand it should be a bit slower because of additional
-;; checks.  I think we can put up with this. -avp
-(define* (make-session #:key host port user ssh-dir identity add-identity
+(define (set-config! session config)
+  (cond
+   ((string? config)
+    (%gssh-session-parse-config! session config))
+   ((boolean? config)
+    (%gssh-session-parse-config! session #f))
+   (else
+    (throw 'guile-ssh-error "Wrong 'config' value" config))))
+
+(define* (session-set! session
+                       #:key host port user ssh-dir identity add-identity
                        knownhosts timeout timeout-usec ssh1 ssh2 log-verbosity
                        ciphers-c-s ciphers-s-c compression-c-s compression-s-c
                        proxycommand stricthostkeycheck compression
                        compression-level callbacks config)
-  "Make a new SSH session with specified configuration.\n
-Return a new SSH session."
-  (let ((session (%make-session)))
+  "Set a SSH option for a SESSION.  Throw an guile-ssh-error on error.
+Return value is undefined."
     (session-set-if-specified! host)
     (session-set-if-specified! port)
     (session-set-if-specified! user)
@@ -99,19 +106,39 @@ Return a new SSH session."
     (session-set-if-specified! compression)
     (session-set-if-specified! compression-level)
     (session-set-if-specified! callbacks)
-
     (when config
-      (or host
-          (throw 'guile-ssh-error
-                 "'config' is specified, but 'host' option is missed."))
-      (cond
-       ((string? config)
-        (%gssh-session-parse-config! session config))
-       ((boolean? config)
-        (%gssh-session-parse-config! session #f))
-       (else
-        (throw 'guile-ssh-error "Wrong 'config' value" config))))
+      (unless host
+        (throw 'guile-ssh-error
+               "'config' is specified, but 'host' option is missed."))
+      (set-config! session config)))
 
+;; This procedure is more convenient than primitive `%make-session',
+;; but on other hand it should be a bit slower because of additional
+;; checks.  I think we can put up with this. -avp
+(define* (make-session #:key host port user ssh-dir identity add-identity
+                       knownhosts timeout timeout-usec ssh1 ssh2 log-verbosity
+                       ciphers-c-s ciphers-s-c compression-c-s compression-s-c
+                       proxycommand stricthostkeycheck compression
+                       compression-level callbacks config)
+  "Make a new SSH session with specified configuration.\n
+Return a new SSH session."
+  (let ((session (%make-session)))
+    (session-set! session
+                  #:host host #:port port #:user user
+                  #:ssh-dir ssh-dir #:identity identity
+                  #:add-identity add-identity
+                  #:knownhosts knownhosts #:timeout timeout
+                  #:timeout-usec timeout-usec #:ssh1 ssh1 #:ssh2 ssh2
+                  #:log-verbosity log-verbosity
+                  #:ciphers-c-s ciphers-c-s #:ciphers-s-c ciphers-s-c
+                  #:compression-c-s compression-c-s
+                  #:compression-s-c compression-s-c
+                  #:proxycommand proxycommand
+                  #:stricthostkeycheck stricthostkeycheck
+                  #:compression compression
+                  #:compression-level compression-level
+                  #:callbacks callbacks
+                  #:config config)
     session))
 
 (define* (session-parse-config! session #:optional file-name)

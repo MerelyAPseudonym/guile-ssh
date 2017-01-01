@@ -74,7 +74,7 @@
      (lambda (opt)
        (for-each
         (lambda (val)
-          (session-set! session (car opt) val))
+          (%session-set! session (car opt) val))
         (cdr opt)))
      options)
     res))
@@ -101,7 +101,7 @@
         (lambda (val)
           (catch #t
             (lambda ()
-              (session-set! session (car opt) val)
+              (%session-set! session (car opt) val)
               (let* ((r (test-runner-current))
                      (l (test-runner-aux-value r)))
                 (format l "  opt: ~a, val: ~a -- passed mistakenly~%"
